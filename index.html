@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Air Quality Forecasting - Demo UI</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 30px;
+            max-width: 720px;
+        }
+        h1 {
+            font-size: 26px;
+            margin-bottom: 10px;
+        }
+        textarea {
+            width: 100%;
+            height: 150px;
+            font-family: monospace;
+            padding: 10px;
+            font-size: 14px;
+        }
+        button {
+            padding: 10px 18px;
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            font-size: 15px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #result {
+            margin-top: 20px;
+            white-space: pre-wrap;
+            padding: 15px;
+            background: #f7f7f7;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+        label {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Air Quality Forecasting Demo</h1>
+<p>
+    This page sends your recent air-quality observations to the backend API
+    and returns predictions for CO, NOx, NO2 etc.
+</p>
+
+<label>API URL:</label><br/>
+<input id="apiUrl" type="text" value="http://127.0.0.1:8000/api/predict" style="width:100%; padding:8px;"><br/><br/>
+
+<label>Forecast Horizon (hours):</label><br/>
+<select id="horizon" style="padding:8px; width:100%; margin-bottom:15px;">
+    <option value="1">1 hour</option>
+    <option value="6">6 hours</option>
+    <option value="12">12 hours</option>
+    <option value="24">24 hours</option>
+</select>
+
+<label>Recent Data (JSON list):</label>
+<textarea id="inputData">[
+  {
+    "timestamp": "2005-02-01T10:00:00",
+    "CO_GT": 1.4,
+    "NMHC_GT": 120,
+    "C6H6_GT": 10.5,
+    "NOx_GT": 200,
+    "NO2_GT": 110,
+    "T": 12.3,
+    "RH": 48.0,
+    "AH": 0.8
+  },
+  {
+    "timestamp": "2005-02-01T11:00:00",
+    "CO_GT": 1.5,
+    "NMHC_GT": 130,
+    "C6H6_GT": 11.0,
+    "NOx_GT": 210,
+    "NO2_GT": 115,
+    "T": 12.5,
+    "RH": 47.5,
+    "AH": 0.82
+  }
+]</textarea>
+
+<br/><br/>
+<button onclick="sendRequest()">Send Prediction Request</button>
+
+<h2>Result</h2>
+<div id="result">Waiting for request...</div>
+
+<script>
+async function sendRequest() {
+    const apiUrl = document.getElementById("apiUrl").value.trim();
+    const horizon = parseInt(document.getElementById("horizon").value);
+    const rawData = document.getElementById("inputData").value;
+
+    let recentData = [];
+    try {
+        recentData = JSON.parse(rawData);
+    } catch (err) {
+        document.getElementById("result").innerText = "❌ Invalid JSON input!";
+        return;
+    }
+
+    const payload = {
+        horizon_hours: horizon,
+        recent_data: recentData
+    };
+
+    document.getElementById("result").innerText = "⏳ Sending request...";
+
+    try {
+        const response = await fetch(apiUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            const errText = await response.text();
+            document.getElementById("result").innerText =
+                "❌ API Error (" + response.status + "):\n" + errText;
+            return;
+        }
+
+        const data = await response.json();
+        document.getElementById("result").innerText =
+            "✅ Prediction successful:\n\n" + JSON.stringify(data, null, 2);
+
+    } catch (error) {
+        document.getElementById("result").innerText =
+            "❌ Network or server error:\n" + error;
+    }
+}
+</script>
+
+</body>
+</html>
